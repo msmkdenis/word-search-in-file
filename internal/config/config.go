@@ -22,8 +22,13 @@ func New() *Config {
 }
 
 func (c *Config) ParseFlags() {
-	flag.StringVar(&c.URLServer, "s", "localhost:8080", "Enter URLServer as ip_address:port Or use SERVER_ADDRESS env")
-	flag.IntVar(&c.FileWorkers, "w", 5, "Enter number of workers as int Or use FILE_WORKERS env")
+	var server string
+	flag.StringVar(&server, "s", "localhost:8080", "Enter URLServer as ip_address:port Or use SERVER_ADDRESS env")
+	var workers int
+	flag.IntVar(&workers, "w", 5, "Enter number of workers as int Or use FILE_WORKERS env")
+	flag.Parse()
+	c.URLServer = server
+	c.FileWorkers = workers
 }
 
 func (c *Config) ParseENV() {
