@@ -13,6 +13,8 @@ import (
 	"github.com/msmkdenis/word-search-in-file/internal/model"
 )
 
+// IndexCache интерфейс кэша индекса
+// Добавляем либо получаем индекс по директории
 type IndexCache interface {
 	GetIndex(dirPath string) map[string]map[string]struct{}
 	AddIndex(dirPath string, idx map[string]map[string]struct{})
@@ -34,6 +36,8 @@ func NewSearcher(idxCache IndexCache, workers int) *SearcherService {
 }
 
 func (s *SearcherService) Search(ctx context.Context, word string, fs model.FileSystem) (files []string, err error) {
+	// Проверяем есть ли в кэше индекс по полученной директории
+	// Если есть - то ищем по нему
 	if idx := s.idxCache.GetIndex(fs.DirPath); idx != nil {
 		s.index.SetIndex(idx)
 		answer := s.index.SearchFiles(word)
@@ -43,12 +47,15 @@ func (s *SearcherService) Search(ctx context.Context, word string, fs model.File
 		return answer, nil
 	}
 
+	// Получаем пути файлов в директории
 	paths, err := s.getFilePaths(fs.FS)
 	if err != nil {
 		return nil, fmt.Errorf("get file paths: %w", err)
 	}
 
+	// Запускаем поиск по каждому файлу
 	grp, ctx := errgroup.WithContext(ctx)
+	// Устанавливаем max кол-во горутин для параллельного поиска
 	grp.SetLimit(s.workers)
 	for _, path := range paths {
 		path := path
@@ -57,6 +64,7 @@ func (s *SearcherService) Search(ctx context.Context, word string, fs model.File
 			case <-ctx.Done():
 				return ctx.Err()
 			default:
+				// Открываем файл
 				file, err := fs.FS.Open(path)
 				defer func() {
 					if errClose := file.Close(); err != nil {
@@ -67,30 +75,38 @@ func (s *SearcherService) Search(ctx context.Context, word string, fs model.File
 				if err != nil {
 					return fmt.Errorf("open file: %w", err)
 				}
-
+				// Считываем построчно
 				scanner := bufio.NewScanner(file)
 				wordSet := make(map[string]struct{})
 				for scanner.Scan() {
 					line := scanner.Text()
+					// Ищем слова
 					words := s.extractWords(line)
+					// Добавляем в локальный индекс файла
 					for _, w := range words {
 						wordSet[w] = struct{}{}
 					}
-					for w := range wordSet {
-						s.index.AddWordFile(w, path)
-					}
+				}
+				// Добавляем в глобальный индекс
+				// По сути это этап синхронизации запущенных горутин
+				// Индекс будет обновлен только когда был просмотрен весь файл и составлен индекс по нему
+				for w := range wordSet {
+					s.index.AddWordFile(w, path)
 				}
 				return nil
 			}
 		})
 	}
 
+	// Ожидаем завершения всех горутин
 	if err := grp.Wait(); err != nil {
 		return nil, fmt.Errorf("make indexes errgroup: %w", err)
 	}
 
+	// Добавляем индекс в кэш
 	s.idxCache.AddIndex(fs.DirPath, s.index.GetIndex())
 
+	// Собираем ответ из индекса
 	answer := s.index.SearchFiles(word)
 	if len(answer) == 0 {
 		return nil, nil

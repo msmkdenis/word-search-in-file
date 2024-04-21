@@ -24,8 +24,10 @@ func Run() {
 
 	cfg := config.New()
 	idxCache := memory.NewIndexCache()
+	// В searcher передаем кэш через интерфейс, можем заменить его на другой
 	searcher := service.NewSearcher(idxCache, cfg.FileWorkers)
 	e := echo.New()
+	// В хендлер передаем интерфейс searcher, требуется для тестов
 	handler.NewSearchHandler(e, searcher)
 
 	// Запустили сервер HTTP
@@ -52,14 +54,15 @@ func Run() {
 	}()
 
 	go func() {
-		// Слушаем сигнальный канал, при закрытии код идет дальше
+		// Слушаем сигнальный канал, горутина блокирует пока не закрыт канал
 		<-quit
 
-		// Shutdown signal with grace period of 10 seconds
+		// Грейс период 10 секунду
 		shutdownCtx, cancel := context.WithTimeout(httpServerCtx, 10*time.Second)
 		defer cancel()
 
 		go func() {
+			// Принудительно завершаемся по тайм-ауту, т.к. не смогли дождаться завершения за грейс период
 			<-shutdownCtx.Done()
 			if errors.Is(shutdownCtx.Err(), context.DeadlineExceeded) {
 				slog.Error("graceful shutdown timed out.. forcing exit.")
@@ -67,7 +70,7 @@ func Run() {
 			}
 		}()
 
-		// Trigger graceful shutdown
+		// Пытаемся остановить http-сервер
 		logger.Info("Shutdown signal received, gracefully stopping http server")
 		if errShutdown := e.Shutdown(shutdownCtx); errShutdown != nil {
 			slog.Error("failed to shutdown http server", slog.String("error", errShutdown.Error()))
