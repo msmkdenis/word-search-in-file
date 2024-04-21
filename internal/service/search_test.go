@@ -2,53 +2,72 @@ package service
 
 import (
 	"context"
-	"io/fs"
-	"reflect"
 	"testing"
 	"testing/fstest"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
+
+	"github.com/msmkdenis/word-search-in-file/internal/mocks"
+	"github.com/msmkdenis/word-search-in-file/internal/model"
 )
 
-func TestSearcher_Search(t *testing.T) {
-	type fields struct {
-		FS fs.FS
+type SearchHandlerTestSuite struct {
+	suite.Suite
+	searcherService *SearcherService
+	mockCache       *mocks.MockIndexCache
+	ctrl            *gomock.Controller
+}
+
+func TestSuite(t *testing.T) {
+	suite.Run(t, new(SearchHandlerTestSuite))
+}
+
+func (s *SearchHandlerTestSuite) SetupTest() {
+	s.ctrl = gomock.NewController(s.T())
+	s.mockCache = mocks.NewMockIndexCache(s.ctrl)
+	s.searcherService = NewSearcher(s.mockCache, 5)
+}
+
+func (s *SearchHandlerTestSuite) TestSearch() {
+	fsTest := fstest.MapFS{
+		"file1.txt": {Data: []byte("World")},
+		"file2.txt": {Data: []byte("World1")},
+		"file3.txt": {Data: []byte("Hello World")},
 	}
-	type args struct {
-		word string
-	}
-	tests := []struct {
-		name      string
-		fields    fields
-		args      args
-		wantFiles []string
-		wantErr   bool
+
+	fs := model.NewFileSystem("./examples", fsTest)
+
+	testCases := []struct {
+		name         string
+		word         string
+		fs           model.FileSystem
+		prepare      func()
+		expectedBody []string
+		expectedErr  error
 	}{
 		{
-			name: "Ok",
-			fields: fields{
-				FS: fstest.MapFS{
-					"file1.txt": {Data: []byte("World")},
-					"file2.txt": {Data: []byte("World1")},
-					"file3.txt": {Data: []byte("Hello World")},
-				},
+			name: "Success",
+			word: "World",
+			fs:   fs,
+			prepare: func() {
+				s.mockCache.EXPECT().GetIndex(gomock.Any()).Times(1).Return(nil)
+				s.mockCache.EXPECT().AddIndex(gomock.Any(), gomock.Any()).Times(1)
 			},
-			args:      args{word: "World"},
-			wantFiles: []string{"file1", "file3"},
-			wantErr:   false,
+			expectedBody: []string{"file1", "file3"},
+			expectedErr:  nil,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &SearcherService{
-				FS: tt.fields.FS,
+	for _, test := range testCases {
+		s.T().Run(test.name, func(t *testing.T) {
+			if test.prepare != nil {
+				test.prepare()
 			}
-			gotFiles, err := s.Search(context.Background(), tt.args.word)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Search() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(gotFiles, tt.wantFiles) {
-				t.Errorf("Search() gotFiles = %v, want %v", gotFiles, tt.wantFiles)
-			}
+
+			files, err := s.searcherService.Search(context.Background(), test.word, test.fs)
+			assert.Equal(t, test.expectedErr, err)
+			assert.Equal(t, files, test.expectedBody)
 		})
 	}
 }

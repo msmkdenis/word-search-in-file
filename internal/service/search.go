@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/msmkdenis/word-search-in-file/internal/model"
-	"golang.org/x/sync/errgroup"
 	"io/fs"
-	"os"
 	"regexp"
 	"strings"
+
+	"golang.org/x/sync/errgroup"
+
+	"github.com/msmkdenis/word-search-in-file/internal/model"
 )
 
 type IndexCache interface {
@@ -32,8 +33,8 @@ func NewSearcher(idxCache IndexCache, workers int) *SearcherService {
 	}
 }
 
-func (s *SearcherService) Search(ctx context.Context, word string, dirPath string) (files []string, err error) {
-	if idx := s.idxCache.GetIndex(dirPath); idx != nil {
+func (s *SearcherService) Search(ctx context.Context, word string, fs model.FileSystem) (files []string, err error) {
+	if idx := s.idxCache.GetIndex(fs.DirPath); idx != nil {
 		s.index.SetIndex(idx)
 		answer := s.index.SearchFiles(word)
 		if len(answer) == 0 {
@@ -42,34 +43,45 @@ func (s *SearcherService) Search(ctx context.Context, word string, dirPath strin
 		return answer, nil
 	}
 
-	fileSystem := os.DirFS(dirPath)
-	paths, err := s.getFilePaths(fileSystem)
+	paths, err := s.getFilePaths(fs.FS)
 	if err != nil {
 		return nil, fmt.Errorf("get file paths: %w", err)
 	}
 
-	grp, ctx := errgroup.WithContext(context.Background())
+	grp, ctx := errgroup.WithContext(ctx)
 	grp.SetLimit(s.workers)
 	for _, path := range paths {
+		path := path
 		grp.Go(func() error {
-			file, err := fileSystem.Open(path)
-			defer file.Close()
-			if err != nil {
-				return fmt.Errorf("open file: %w", err)
-			}
-			scanner := bufio.NewScanner(file)
-			wordSet := make(map[string]struct{})
-			for scanner.Scan() {
-				line := scanner.Text()
-				words := s.extractWords(line)
-				for _, w := range words {
-					wordSet[w] = struct{}{}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+				file, err := fs.FS.Open(path)
+				defer func() {
+					if errClose := file.Close(); err != nil {
+						err = errClose
+					}
+				}()
+
+				if err != nil {
+					return fmt.Errorf("open file: %w", err)
 				}
-				for w := range wordSet {
-					s.index.AddWordFile(w, path)
+
+				scanner := bufio.NewScanner(file)
+				wordSet := make(map[string]struct{})
+				for scanner.Scan() {
+					line := scanner.Text()
+					words := s.extractWords(line)
+					for _, w := range words {
+						wordSet[w] = struct{}{}
+					}
+					for w := range wordSet {
+						s.index.AddWordFile(w, path)
+					}
 				}
+				return nil
 			}
-			return nil
 		})
 	}
 
@@ -77,7 +89,7 @@ func (s *SearcherService) Search(ctx context.Context, word string, dirPath strin
 		return nil, fmt.Errorf("make indexes errgroup: %w", err)
 	}
 
-	s.idxCache.AddIndex(dirPath, s.index.GetIndex())
+	s.idxCache.AddIndex(fs.DirPath, s.index.GetIndex())
 
 	answer := s.index.SearchFiles(word)
 	if len(answer) == 0 {
