@@ -49,13 +49,10 @@ func (s *Searcher) Search(ctx context.Context, word string) (files []string, err
 	}
 
 	idx := &index{words: make(map[string]map[string]struct{})}
-
 	grp, ctx := errgroup.WithContext(context.Background())
+	grp.SetLimit(5)
 	for _, path := range paths {
 		grp.Go(func() error {
-			if ctx.Done() != nil {
-				return ctx.Err()
-			}
 			file, err := s.FS.Open(path)
 			defer file.Close()
 
