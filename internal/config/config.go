@@ -31,7 +31,7 @@ func (c *Config) ParseENV() {
 		c.URLServer = envURLServer
 	}
 
-	if envFileWorkers := os.Getenv("FileWorkers"); envFileWorkers != "" {
+	if envFileWorkers := os.Getenv("FILE_WORKERS"); envFileWorkers != "" {
 		envFileWorkersInt, err := strconv.Atoi(envFileWorkers)
 		if err != nil {
 			slog.Info("Bad request: FileWorkers should be int, using default value")
