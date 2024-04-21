@@ -2,12 +2,14 @@ package config
 
 import (
 	"flag"
+	"log/slog"
 	"os"
+	"strconv"
 )
 
 type Config struct {
-	URLServer string
-	FSPath    string
+	URLServer   string
+	FileWorkers int
 }
 
 func New() *Config {
@@ -21,7 +23,7 @@ func New() *Config {
 
 func (c *Config) ParseFlags() {
 	flag.StringVar(&c.URLServer, "s", "localhost:8080", "Enter URLServer as ip_address:port Or use SERVER_ADDRESS env")
-	flag.StringVar(&c.FSPath, "f", "./examples", "Enter FSPath as path or use FS_PATH env")
+	flag.IntVar(&c.FileWorkers, "w", 5, "Enter number of workers as int Or use FILE_WORKERS env")
 }
 
 func (c *Config) ParseENV() {
@@ -29,7 +31,12 @@ func (c *Config) ParseENV() {
 		c.URLServer = envURLServer
 	}
 
-	if envFSPath := os.Getenv("FS_PATH"); envFSPath != "" {
-		c.FSPath = envFSPath
+	if envFileWorkers := os.Getenv("FileWorkers"); envFileWorkers != "" {
+		envFileWorkersInt, err := strconv.Atoi(envFileWorkers)
+		if err != nil {
+			slog.Info("Bad request: FileWorkers should be int, using default value")
+			return
+		}
+		c.FileWorkers = envFileWorkersInt
 	}
 }

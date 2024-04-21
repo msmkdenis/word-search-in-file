@@ -3,16 +3,18 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/labstack/echo/v4"
-	"github.com/msmkdenis/word-search-in-file/pkg/internal/config"
-	"github.com/msmkdenis/word-search-in-file/pkg/internal/handler"
-	"github.com/msmkdenis/word-search-in-file/pkg/searcher"
+	"github.com/msmkdenis/word-search-in-file/internal/cache/memory"
+	"github.com/msmkdenis/word-search-in-file/internal/config"
+	"github.com/msmkdenis/word-search-in-file/internal/handler"
+	"github.com/msmkdenis/word-search-in-file/internal/service"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/labstack/echo/v4"
 )
 
 func main() {
@@ -20,9 +22,10 @@ func main() {
 	slog.SetDefault(logger)
 
 	cfg := config.New()
-	fs := &searcher.Searcher{FS: os.DirFS(cfg.FSPath)}
+	idxCache := memory.NewIndexCache()
+	searcher := service.NewSearcher(idxCache)
 	e := echo.New()
-	handler.NewSearchHandler(e, fs)
+	handler.NewSearchHandler(e, cfg.FSPath, searcher)
 
 	// Запустили сервер HTTP
 	go func() {

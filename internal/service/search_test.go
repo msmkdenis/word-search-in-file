@@ -1,4 +1,4 @@
-package searcher
+package service
 
 import (
 	"context"
@@ -38,7 +38,7 @@ func TestSearcher_Search(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Searcher{
+			s := &SearcherService{
 				FS: tt.fields.FS,
 			}
 			gotFiles, err := s.Search(context.Background(), tt.args.word)
