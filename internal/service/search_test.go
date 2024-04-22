@@ -57,6 +57,16 @@ func (s *SearchHandlerTestSuite) TestSearch() {
 			expectedBody: []string{"file1", "file3"},
 			expectedErr:  nil,
 		},
+		{
+			name: "Success files not found",
+			word: "SomeStrangeMissingWord",
+			fs:   fs,
+			prepare: func() {
+				s.mockCache.EXPECT().SetIndex(gomock.Any(), gomock.Any()).Times(1)
+			},
+			expectedBody: nil,
+			expectedErr:  nil,
+		},
 	}
 	for _, test := range testCases {
 		s.T().Run(test.name, func(t *testing.T) {
