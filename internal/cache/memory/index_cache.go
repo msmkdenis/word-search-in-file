@@ -1,7 +1,6 @@
 package memory
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 )
@@ -32,6 +31,5 @@ func (i *IndexCache) GetFiles(path, word string) ([]string, bool) {
 func (i *IndexCache) SetIndex(path string, idx map[string][]string) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
-	fmt.Println(idx)
 	i.searchIdx[path] = idx
 }
