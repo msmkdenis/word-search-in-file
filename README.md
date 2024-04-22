@@ -2,6 +2,7 @@
 ```
 go run cmd/main.go
 ```
+Использовались сторонние зависимости: echo, testify, gomock
 
 Поддерживаются флаги, переменные окружения (переменные имеют приоритет)
 
@@ -13,7 +14,7 @@ go run cmd/main.go
 - `dir` - директория с файлами
 - `word` - искомое слово
 
-Протестировать можно запустив приложени и выполнив curl запрос
+Протестировать можно запустив приложение и выполнив curl запрос
 
 ```
 curl -G -v -d "dir=./examples" -d "word=World" http://localhost:8080/files/search
@@ -57,6 +58,53 @@ curl -G -v -d "dir=./examples" -d "word=World" http://localhost:8080/files/searc
 < Content-Length: 18
 < 
 ["file1","file3"]
+* Connection #0 to host localhost left intact
+
+```
+Если слово не найдено вернется null и 200
+```
+curl -G -v -d "dir=./examples" -d "word=StrangeMissingWord" http://localhost:8080/files/search
+```
+
+```
+*   Trying 127.0.0.1:8080...
+* Connected to localhost (127.0.0.1) port 8080 (#0)
+> GET /files/search?dir=./examples&word=StrangeMissingWord HTTP/1.1
+> Host: localhost:8080
+> User-Agent: curl/7.81.0
+> Accept: */*
+> 
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+< Content-Type: application/json
+< X-Cache: None
+< Date: Mon, 22 Apr 2024 07:18:56 GMT
+< Content-Length: 5
+< 
+null
+* Connection #0 to host localhost left intact
+```
+
+Если не указать параметры запроса вернется null и 400 ошибка:
+```
+curl -G -v http://localhost:8080/files/search
+```
+
+```
+*   Trying 127.0.0.1:8080...
+* Connected to localhost (127.0.0.1) port 8080 (#0)
+> GET /files/search HTTP/1.1
+> Host: localhost:8080
+> User-Agent: curl/7.81.0
+> Accept: */*
+> 
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 400 Bad Request
+< Content-Type: application/json
+< Date: Mon, 22 Apr 2024 07:16:40 GMT
+< Content-Length: 5
+< 
+null
 * Connection #0 to host localhost left intact
 
 ```
