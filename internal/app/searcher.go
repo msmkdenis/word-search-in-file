@@ -15,6 +15,7 @@ import (
 	"github.com/msmkdenis/word-search-in-file/internal/cache/memory"
 	"github.com/msmkdenis/word-search-in-file/internal/config"
 	"github.com/msmkdenis/word-search-in-file/internal/handler"
+	"github.com/msmkdenis/word-search-in-file/internal/middleware"
 	"github.com/msmkdenis/word-search-in-file/internal/service"
 )
 
@@ -23,12 +24,16 @@ func Run() {
 	slog.SetDefault(logger)
 
 	cfg := config.New()
+	// Интерфейс кэша
 	idxCache := memory.NewIndexCache()
+	// Используем метод для поиска файлов из кэша - передаем интерфейс в middleware
+	cacheMiddleware := middleware.NewCacheSearchMiddleware(idxCache)
 	// В searcher передаем кэш через интерфейс, можем заменить его на другой
 	searcher := service.NewSearcher(idxCache, cfg.FileWorkers)
+
 	e := echo.New()
 	// В хендлер передаем интерфейс searcher, требуется для тестов
-	handler.NewSearchHandler(e, searcher)
+	handler.NewSearchHandler(e, searcher, cacheMiddleware)
 
 	// Запустили сервер HTTP
 	go func() {

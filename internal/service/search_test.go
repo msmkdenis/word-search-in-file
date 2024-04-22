@@ -52,8 +52,7 @@ func (s *SearchHandlerTestSuite) TestSearch() {
 			word: "World",
 			fs:   fs,
 			prepare: func() {
-				s.mockCache.EXPECT().GetIndex(gomock.Any()).Times(1).Return(nil)
-				s.mockCache.EXPECT().AddIndex(gomock.Any(), gomock.Any()).Times(1)
+				s.mockCache.EXPECT().SetIndex(gomock.Any(), gomock.Any()).Times(1)
 			},
 			expectedBody: []string{"file1", "file3"},
 			expectedErr:  nil,
@@ -67,7 +66,7 @@ func (s *SearchHandlerTestSuite) TestSearch() {
 
 			files, err := s.searcherService.Search(context.Background(), test.word, test.fs)
 			assert.Equal(t, test.expectedErr, err)
-			assert.Equal(t, files, test.expectedBody)
+			assert.Equal(t, test.expectedBody, files)
 		})
 	}
 }

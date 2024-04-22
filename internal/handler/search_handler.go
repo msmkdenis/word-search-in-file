@@ -8,6 +8,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/msmkdenis/word-search-in-file/internal/middleware"
 	"github.com/msmkdenis/word-search-in-file/internal/model"
 )
 
@@ -16,17 +17,19 @@ type Searcher interface {
 }
 
 type SearchHandler struct {
-	e        *echo.Echo
-	searcher Searcher
+	e               *echo.Echo
+	searcher        Searcher
+	cacheMiddleware *middleware.CacheSearchMiddleware
 }
 
-func NewSearchHandler(e *echo.Echo, searcher Searcher) *SearchHandler {
+func NewSearchHandler(e *echo.Echo, searcher Searcher, cache *middleware.CacheSearchMiddleware) *SearchHandler {
 	handler := &SearchHandler{
-		e:        e,
-		searcher: searcher,
+		e:               e,
+		searcher:        searcher,
+		cacheMiddleware: cache,
 	}
 
-	e.GET("/files/search", handler.SearchWords)
+	e.GET("/files/search", handler.SearchWords, handler.cacheMiddleware.GetFromCache())
 
 	return handler
 }

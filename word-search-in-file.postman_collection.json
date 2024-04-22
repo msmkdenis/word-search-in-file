@@ -1,0 +1,42 @@
+{
+	"info": {
+		"_postman_id": "61dbff1b-f61d-4561-a181-58919b121565",
+		"name": "word-search-in-file",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "21643786"
+	},
+	"item": [
+		{
+			"name": "SearchWord",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/files/search",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"files",
+						"search"
+					],
+					"query": [
+						{
+							"key": "word",
+							"value": "world",
+							"disabled": true
+						},
+						{
+							"key": "dir",
+							"value": "./examples",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

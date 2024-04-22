@@ -16,42 +16,30 @@ import (
 // IndexCache интерфейс кэша индекса
 // Добавляем либо получаем индекс по директории
 type IndexCache interface {
-	GetIndex(dirPath string) map[string]map[string]struct{}
-	AddIndex(dirPath string, idx map[string]map[string]struct{})
+	GetFiles(path, word string) ([]string, bool)
+	SetIndex(path string, idx map[string][]string)
 }
 
 type SearcherService struct {
-	index    *model.Index
 	idxCache IndexCache
 	workers  int
 }
 
 func NewSearcher(idxCache IndexCache, workers int) *SearcherService {
-	idx := model.NewIndex()
 	return &SearcherService{
-		index:    idx,
 		idxCache: idxCache,
 		workers:  workers,
 	}
 }
 
-func (s *SearcherService) Search(ctx context.Context, word string, fs model.FileSystem) (files []string, err error) {
-	// Проверяем есть ли в кэше индекс по полученной директории
-	// Если есть - то ищем по нему
-	if idx := s.idxCache.GetIndex(fs.DirPath); idx != nil {
-		s.index.SetIndex(idx)
-		answer := s.index.SearchFiles(word)
-		if len(answer) == 0 {
-			return nil, nil
-		}
-		return answer, nil
-	}
-
+func (s *SearcherService) Search(ctx context.Context, word string, fs model.FileSystem) ([]string, error) {
 	// Получаем пути файлов в директории
 	paths, err := s.getFilePaths(fs.FS)
 	if err != nil {
 		return nil, fmt.Errorf("get file paths: %w", err)
 	}
+
+	index := model.NewIndex()
 
 	// Запускаем поиск по каждому файлу
 	grp, ctx := errgroup.WithContext(ctx)
@@ -91,7 +79,7 @@ func (s *SearcherService) Search(ctx context.Context, word string, fs model.File
 				// По сути это этап синхронизации запущенных горутин
 				// Индекс будет обновлен только когда был просмотрен весь файл и составлен индекс по нему
 				for w := range wordSet {
-					s.index.AddWordFile(w, path)
+					index.AddWordFile(w, strings.Split(path, ".")[0])
 				}
 				return nil
 			}
@@ -103,11 +91,15 @@ func (s *SearcherService) Search(ctx context.Context, word string, fs model.File
 		return nil, fmt.Errorf("make indexes errgroup: %w", err)
 	}
 
+	// После индексирования создаем глобальный индекс для поиска за О(1)
+	// Обусловлено требованием задания - тестами
+	// Необходим был вывод файлов в определенной отсортированной последовательности
+	// map же нам гарантирует случайны порядок перебора
+	index.BuildSearchIndex()
 	// Добавляем индекс в кэш
-	s.idxCache.AddIndex(fs.DirPath, s.index.GetIndex())
+	s.idxCache.SetIndex(fs.DirPath, index.GetIndex())
 
-	// Собираем ответ из индекса
-	answer := s.index.SearchFiles(word)
+	answer := index.GetFiles(word)
 	if len(answer) == 0 {
 		return nil, nil
 	}

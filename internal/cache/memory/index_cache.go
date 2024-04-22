@@ -1,28 +1,36 @@
 package memory
 
 import (
+	"fmt"
 	"sync"
 )
 
 type IndexCache struct {
-	index map[string]map[string]map[string]struct{}
-	mu    sync.RWMutex
+	searchIdx map[string]map[string][]string
+	mu        sync.RWMutex
 }
 
 func NewIndexCache() *IndexCache {
 	return &IndexCache{
-		index: make(map[string]map[string]map[string]struct{}),
+		searchIdx: make(map[string]map[string][]string),
 	}
 }
 
-func (i *IndexCache) GetIndex(path string) map[string]map[string]struct{} {
+func (i *IndexCache) GetFiles(path, word string) ([]string, bool) {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
-	return i.index[path]
+	filesIdx, ok := i.searchIdx[path]
+	if !ok {
+		return nil, false
+	}
+
+	files := filesIdx[word]
+	return files, true
 }
 
-func (i *IndexCache) AddIndex(path string, idx map[string]map[string]struct{}) {
+func (i *IndexCache) SetIndex(path string, idx map[string][]string) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
-	i.index[path] = idx
+	fmt.Println(idx)
+	i.searchIdx[path] = idx
 }

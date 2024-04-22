@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/msmkdenis/word-search-in-file/internal/middleware"
 	"github.com/msmkdenis/word-search-in-file/internal/mocks"
 )
 
@@ -21,6 +22,7 @@ type SearchHandlerTestSuite struct {
 	searcherService *mocks.MockSearcher
 	echo            *echo.Echo
 	ctrl            *gomock.Controller
+	cache           *mocks.MockIndexCache
 }
 
 func TestSuite(t *testing.T) {
@@ -31,7 +33,9 @@ func (s *SearchHandlerTestSuite) SetupTest() {
 	s.ctrl = gomock.NewController(s.T())
 	s.echo = echo.New()
 	s.searcherService = mocks.NewMockSearcher(s.ctrl)
-	s.h = NewSearchHandler(s.echo, s.searcherService)
+	s.cache = mocks.NewMockIndexCache(s.ctrl)
+	cacheMiddleware := middleware.NewCacheSearchMiddleware(s.cache)
+	s.h = NewSearchHandler(s.echo, s.searcherService, cacheMiddleware)
 }
 
 func (s *SearchHandlerTestSuite) TestSearchWords_Handler() {

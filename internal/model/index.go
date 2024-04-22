@@ -7,24 +7,47 @@ import (
 )
 
 type Index struct {
-	words map[string]map[string]struct{}
-	mu    sync.RWMutex
+	mu        sync.RWMutex
+	words     map[string]map[string]struct{}
+	searchIdx map[string][]string
 }
 
 func NewIndex() *Index {
-	return &Index{words: make(map[string]map[string]struct{})}
+	return &Index{
+		words:     make(map[string]map[string]struct{}),
+		searchIdx: make(map[string][]string),
+	}
 }
 
-func (i *Index) GetIndex() map[string]map[string]struct{} {
+func (i *Index) GetIndex() map[string][]string {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
-	return i.words
+	return i.searchIdx
 }
 
 func (i *Index) SetIndex(idx map[string]map[string]struct{}) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	i.words = idx
+}
+
+func (i *Index) BuildSearchIndex() {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	for k, v := range i.words {
+		var files []string
+		for f := range v {
+			files = append(files, strings.Split(f, ".")[0])
+		}
+		slices.Sort(files)
+		i.searchIdx[k] = files
+	}
+}
+
+func (i *Index) GetFiles(word string) []string {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+	return i.searchIdx[strings.ToLower(word)]
 }
 
 func (i *Index) AddWordFile(word string, path string) {

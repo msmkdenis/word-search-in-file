@@ -33,28 +33,29 @@ func (m *MockIndexCache) EXPECT() *MockIndexCacheMockRecorder {
 	return m.recorder
 }
 
-// AddIndex mocks base method.
-func (m *MockIndexCache) AddIndex(arg0 string, arg1 map[string]map[string]struct{}) {
+// GetFiles mocks base method.
+func (m *MockIndexCache) GetFiles(arg0, arg1 string) ([]string, bool) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "AddIndex", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetFiles", arg0, arg1)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(bool)
+	return ret0, ret1
 }
 
-// AddIndex indicates an expected call of AddIndex.
-func (mr *MockIndexCacheMockRecorder) AddIndex(arg0, arg1 interface{}) *gomock.Call {
+// GetFiles indicates an expected call of GetFiles.
+func (mr *MockIndexCacheMockRecorder) GetFiles(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddIndex", reflect.TypeOf((*MockIndexCache)(nil).AddIndex), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFiles", reflect.TypeOf((*MockIndexCache)(nil).GetFiles), arg0, arg1)
 }
 
-// GetIndex mocks base method.
-func (m *MockIndexCache) GetIndex(arg0 string) map[string]map[string]struct{} {
+// SetIndex mocks base method.
+func (m *MockIndexCache) SetIndex(arg0 string, arg1 map[string][]string) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetIndex", arg0)
-	ret0, _ := ret[0].(map[string]map[string]struct{})
-	return ret0
+	m.ctrl.Call(m, "SetIndex", arg0, arg1)
 }
 
-// GetIndex indicates an expected call of GetIndex.
-func (mr *MockIndexCacheMockRecorder) GetIndex(arg0 interface{}) *gomock.Call {
+// SetIndex indicates an expected call of SetIndex.
+func (mr *MockIndexCacheMockRecorder) SetIndex(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIndex", reflect.TypeOf((*MockIndexCache)(nil).GetIndex), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetIndex", reflect.TypeOf((*MockIndexCache)(nil).SetIndex), arg0, arg1)
 }
