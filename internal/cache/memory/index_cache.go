@@ -2,6 +2,7 @@ package memory
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -24,7 +25,7 @@ func (i *IndexCache) GetFiles(path, word string) ([]string, bool) {
 		return nil, false
 	}
 
-	files := filesIdx[word]
+	files := filesIdx[strings.ToLower(word)]
 	return files, true
 }
 
